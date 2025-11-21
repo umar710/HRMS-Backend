@@ -1,4 +1,3 @@
-// backend/server.js
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -15,11 +14,7 @@ const auditRoutes = require("./src/routes/audit");
 const app = express();
 
 // Security middleware
-app.use(
-  helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" },
-  })
-);
+app.use(helmet());
 
 // Rate limiting
 const limiter = rateLimit({
@@ -31,22 +26,40 @@ const limiter = rateLimit({
 });
 app.use("/api/", limiter);
 
-// CORS
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+// CORS Configuration
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    const allowedOrigins = [
+      "http://localhost:3000",
+      "https://hrms-frontend-sand.vercel.app",
+      "https://hrms-frontend.vercel.app",
+    ];
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+};
+
+app.use(cors(corsOptions));
+
+// Handle preflight requests
+app.options("*", cors(corsOptions));
 
 // Logging
 app.use(morgan("combined"));
 
 // Body parsing middleware
 app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
 
 // Health check
 app.get("/api/health", (req, res) => {
@@ -71,6 +84,11 @@ app.use("/api/*", (req, res) => {
 // Global error handling middleware
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
+
+  // CORS errors
+  if (err.message.includes("CORS")) {
+    return res.status(403).json({ error: "CORS policy violation" });
+  }
 
   // MySQL duplicate entry error
   if (err.code === "ER_DUP_ENTRY") {
