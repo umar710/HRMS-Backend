@@ -4,9 +4,7 @@ A complete Human Resource Management System (HRMS) backend built with Node.js, E
 
 ## 🚀 Live Deployment
 
-**Base URL:** `https://hrms-backend-q8zb.onrender.com`
-
-**API Documentation:** `https://hrms-backend-q8zb.onrender.com/api/health`
+**Base URL:** https://hrms-backend-q8zb.onrender.com
 
 ## 📋 Features
 
